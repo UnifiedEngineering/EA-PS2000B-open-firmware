@@ -1,0 +1,11 @@
+
+.DS_Store
+
+# Eclipse workspace
+workspace/
+
+# Eclipse project settings
+.settings/
+
+# Generated output files
+*/Debug
