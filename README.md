@@ -29,21 +29,27 @@ Still a work-in-progress, the following front panel parts are working:
 * USB CDC ACM driver (just echoing data back to host)
 * Rough initial NXP ISP support for RAM-booting the modules
 * FreeRTOS up and running
+* Tracking mode
+* Preset button will show setpoints (setpoints will also briefly show when encoders are adjusted)
 
 Front panel work in progress/not implemented yet:
 * Retrieving more module data such as over-voltage/current (all stored in riser modules)
-* Tracking mode
 * Preset "menu", OVP/OCP, Lock
 * USB communication protocol (SCPI perhaps?)
+* Key debounce needs sorting out
 
 The following riser firmware parts are working:
-* UART communication (only receives setpoints and send fake readback at the moment)
+* UART communication (receives setpoints and sends readback, responds to queries)
 * PWM outputs driving voltage and current setpoints (higher resolution than original firmware)
 * Debug output over SWO
+* ADC readback of voltage, current and temperature
+* Constant Current indication
+* Over-temperature shutdown/indication (may need some hysteresis)
 
 Riser module in progress/not implemented yet:
-* ADC readback (including thermal and OVP/OCP shutdown)
+* OVP/OCP shutdown
 * Storing setpoints to EEPROM (after a timeout, limiting EEPROM programming cycles)
+* Handle set property (like OVP/OCP), not sure if OVP/OCP should be committed to EEPROM
 
 Project name | Description
 -------------|------------

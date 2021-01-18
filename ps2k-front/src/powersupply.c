@@ -147,7 +147,7 @@ static void ps_send_request(uint32_t chnum, uint32_t objid) {
 
 static void ps_task( void* pvParameters ) {
 // Either we RAM-load firmware or let the modules boot from internal flash
-#if 0
+#if 1
 	s_is_isp = true;
 	isp_mode();
 #else
