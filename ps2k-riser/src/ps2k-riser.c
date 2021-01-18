@@ -126,17 +126,24 @@ static void handle_set_setpoint(uint32_t len) {
 	uint16_t newvolt = s_rxbuf[2] << 8 | s_rxbuf[3];
 	uint16_t newcurr = s_rxbuf[4] << 8 | s_rxbuf[5];
 
-	if (newvolt != s_setpoint.voltage) {
-		s_setpoint.voltage = newvolt;
-		s_setpoint_updated = true;
-		update_setpoint(CAL_VOLT_SET);
+	if (s_overtemp) newonoff = 0;
+	// Sanity check against max power
+	uint32_t power = (newvolt * newcurr) >> 16;
+	if (power < s_id.max_out_power) {
+		if (newvolt != s_setpoint.voltage) {
+			s_setpoint.voltage = newvolt;
+			s_setpoint_updated = true;
+			update_setpoint(CAL_VOLT_SET);
+		}
+		if (newcurr != s_setpoint.current) {
+			s_setpoint.current = newcurr;
+			s_setpoint_updated = true;
+			update_setpoint(CAL_CURR_SET);
+		}
+		output_enable (newonoff & 1);
+	} else {
+		ITM_SendChar('R');
 	}
-	if (newcurr != s_setpoint.current) {
-		s_setpoint.current = newcurr;
-		s_setpoint_updated = true;
-		update_setpoint(CAL_CURR_SET);
-	}
-	output_enable (newonoff & 1);
 
 //test until we have adc readings
 	readback_volt = newvolt;
