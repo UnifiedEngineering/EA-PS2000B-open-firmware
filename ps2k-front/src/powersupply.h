@@ -58,6 +58,7 @@ Request 15 (?) : 0x10 0xbe 4286 dec (max power?)
  */
 
 #define STATUS_OVERTEMP _BV(7)
+#define STATUS_MODE_MASK (_BV(2) | _BV(1))
 #define STATUS_CC _BV(2)
 #define STATUS_OUTPUT_ON _BV(0)
 
