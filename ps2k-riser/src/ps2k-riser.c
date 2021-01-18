@@ -73,6 +73,7 @@ static uint32_t s_numrx = 0;
 static uint8_t s_rxbuf[16];
 #define RX_SIZE (sizeof(s_rxbuf))
 
+#define PWMSHIFT (16)
 static void update_setpoint(cal_t id) {
 	uint32_t tmp = s_cal.cal[id].gain;
 
@@ -83,9 +84,16 @@ static void update_setpoint(cal_t id) {
 	case CAL_CURR_SET:
 		tmp *= s_setpoint.current;
 		break;
+	case CAL_VOLT_READ:
+	case CAL_CURR_READ:
+	case CAL_REF_READ:
+	case CAL_TEMP_READ:
+	case CAL_MAX_VAL:
+		; // Not applicable here
 	}
 
-	tmp >>= 16;
+	tmp += 1 << (PWMSHIFT - 1); // Round
+	tmp >>= PWMSHIFT;
 	tmp += s_cal.cal[id].offset;
 
 	switch(id) {
@@ -97,6 +105,12 @@ static void update_setpoint(cal_t id) {
 //		Chip_TIMER_SetMatch(LPC_TIMER16_1, 0, 2048-(tmp>>3)); // Inverted PWM duty for MAT0 (current)
 		Chip_TIMER_SetMatch(LPC_TIMER16_1, 0, 16383-(tmp)); // Inverted PWM duty for MAT0 (current)
 		break;
+	case CAL_VOLT_READ:
+	case CAL_CURR_READ:
+	case CAL_REF_READ:
+	case CAL_TEMP_READ:
+	case CAL_MAX_VAL:
+		; // Not applicable here
 	}
 }
 
