@@ -57,6 +57,8 @@ typedef struct {					/*!< TIMERn Structure       */
 	__IO uint32_t EMR;				/*!< External Match Register. The EMR controls the external match pins MATn.0-3 (MAT0.0-3 and MAT1.0-3 respectively). */
 	__I  uint32_t RESERVED0[12];
 	__IO uint32_t CTCR;				/*!< Count Control Register. The CTCR selects between Timer and Counter mode, and in Counter mode selects the signal and edge(s) for counting. */
+// Somebody forgot PWMC?
+	__IO uint32_t PWMC;				/*!< PWM Ctrl. The PWMC controls PWM operation on MATx. */
 } LPC_TIMER_T;
 
 /** Macro to clear interrupt pending */

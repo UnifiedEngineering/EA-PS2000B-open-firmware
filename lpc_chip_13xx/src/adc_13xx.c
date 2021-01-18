@@ -124,7 +124,7 @@ void Chip_ADC_Init(LPC_ADC_T *pADC, ADC_CLOCK_SETUP_T *ADCSetup)
     Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_ADC);
 
 #if defined(ADC_TRIM_SUPPORT)
-	pADC->ADTRM = 0xF00;
+	//pADC->ADTRM = 0xF00; // Already written by bootROM according to user manual, don't overwrite
 #endif
 	pADC->INTEN = 0;		/* Disable all interrupts */
 

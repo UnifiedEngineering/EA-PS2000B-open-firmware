@@ -1,5 +1,5 @@
 # EA-PS2000B-open-firmware
-Alternate open-source firmware for the EA Elektro-Automatik PS 2300B power supplies
+Alternate open-source firmware for the [EA Elektro-Automatik PS 2300B](https://elektroautomatik.com/shop/en/products/programmable-dc-laboratory-power-supplies/dc-laboratory-power-supplies/series-ps-2000b-br-100-up-to-332-w/) power supplies
 
 ## Original firmware issues
 This firmware attempts to rectify a few issues mainly with the front panel operations of the PS2000B-series power supplies. The issues I encountered with the original firmware (my power supply was shipped with firmware version 3.06 dated 2018-12-27):
@@ -19,15 +19,19 @@ The PS2000 LT MC riser boards normally boots their firmware from internal flash 
 I'm using the ISP mode and loading the alternate riser firmware directly into RAM which means that restoring original firmware operation is as simple as restoring the original `firmware.bin` file to the front panel (which does *NOT* contain any riser board firmware, it assumes that the riser will boot on its own).
 
 ## Open-source implementation
+
+![Open firmware booting](images/ps2k-boot.jpg "Open firmware booting")
+
 Still a work-in-progress, the following front panel parts are working:
 * SPI segment displays, 7-seg font and glyphs
 * Keys and rotary encoder input
 * Basic UART communication to the riser modules (send setpoints and receive readback)
 * USB CDC ACM driver (just echoing data back to host)
 * Rough initial NXP ISP support for RAM-booting the modules
+* FreeRTOS up and running
 
 Front panel work in progress/not implemented yet:
-* Retrieving stored setpoints, including over-voltage/current (all stored in riser modules)
+* Retrieving more module data such as over-voltage/current (all stored in riser modules)
 * Tracking mode
 * Preset "menu", OVP/OCP, Lock
 * USB communication protocol (SCPI perhaps?)
@@ -39,7 +43,6 @@ The following riser firmware parts are working:
 
 Riser module in progress/not implemented yet:
 * ADC readback (including thermal and OVP/OCP shutdown)
-* Readout of stored setpoints
 * Storing setpoints to EEPROM (after a timeout, limiting EEPROM programming cycles)
 
 Project name | Description
