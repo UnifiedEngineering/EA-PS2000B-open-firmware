@@ -44,6 +44,23 @@ bool s_setpoint_updated = false;
 uint16_t readback_volt = 0;
 uint16_t readback_curr = 0;
 
+typedef enum {
+	AD_REF = 0,
+	AD_CURR,
+	AD_2,
+	AD_3,
+	AD_4,
+	AD_VOLT,
+	AD_LOOP,
+	AD_TEMP,
+	AD_MAX_VAL
+} adch_t;
+
+static uint16_t s_adc_result[AD_MAX_VAL];
+
+static const uint8_t s_adscan[] = {AD_REF, AD_CURR, AD_VOLT, AD_LOOP, AD_TEMP};
+#define AD_SCAN_LEN (sizeof(s_adscan) / sizeof(s_adscan[0]))
+
 static uint32_t calc_checksum(uint8_t* buf, uint32_t size) {
 	uint32_t result = 0;
 	for (int i = 0; i < size; i++) {
@@ -191,8 +208,48 @@ void UART_IRQHandler(void) {
 	}
 }
 
+static uint32_t s_adc_cr = 0;
+static uint32_t s_adc_state = 0;
+static uint32_t s_adc_accumulator = 0;
+static uint8_t s_scanstate = 0;
+
+static void adc_setup_burst(uint32_t ch) {
+	LPC_ADC->INTEN = 0;
+	s_adc_cr &= ~(0xff | ADC_CR_BURST);
+	LPC_ADC->CR = s_adc_cr;
+	s_adc_accumulator = 0;
+	s_adc_state = ch << 16;
+	s_adc_cr |= ADC_CR_CH_SEL(ch);
+	LPC_ADC->CR = s_adc_cr;
+	// Activate the interrupt corresponding to the selected channel
+	LPC_ADC->INTEN = ADC_CR_CH_SEL(ch);
+	s_adc_cr |= ADC_CR_BURST;
+	LPC_ADC->CR = s_adc_cr;
+}
+
 void ADC_IRQHandler(void) {
-	ITM_SendChar('A');
+//	ITM_SendChar('A');
+	uint32_t reqch = (s_adc_state >> 16) & 0x7;
+	uint32_t data = LPC_ADC->DR[reqch];
+
+	if (!ADC_DR_DONE(data)) {
+		// Ignore
+//		ITM_SendChar('I');
+	} else {
+		s_adc_accumulator += ADC_DR_RESULT(data);
+		s_adc_state++;
+		// 8192 samples per channel at 14.4MHz ADC clock results in
+		// ~11 measurements per second per channel with 5 active channels
+		if ((s_adc_state & 0x1fff) == 0) { // 8192 samples?
+			uint32_t tmp = s_adc_accumulator;
+			s_scanstate++;
+			if (s_scanstate >= AD_SCAN_LEN) s_scanstate = 0;
+			adc_setup_burst(s_adscan[s_scanstate]);
+			tmp += 1 << 8; // Round
+			tmp >>= 9; // 4 bits oversampling with 8192 samples requires accumulator to be /512
+			s_adc_result[reqch] = tmp;
+		}
+	}
 }
 
 int main(void) {
@@ -211,9 +268,9 @@ int main(void) {
 	// ADC pinmux
 	LPC_IOCON->PIO0[11] = IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_ADMODE_EN; // ad0 reference
 	LPC_IOCON->PIO0[12] = IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_ADMODE_EN; // ad1 current
-	LPC_IOCON->PIO0[16] = IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_ADMODE_EN; // ad5 voltage
-	LPC_IOCON->PIO0[22] = IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_ADMODE_EN; // ad6 loopback
-	LPC_IOCON->PIO0[23] = IOCON_FUNC2 | IOCON_MODE_INACT | IOCON_ADMODE_EN; // ad7 temperature
+	LPC_IOCON->PIO0[16] = IOCON_FUNC1 | IOCON_MODE_INACT | IOCON_ADMODE_EN; // ad5 voltage
+	LPC_IOCON->PIO0[22] = IOCON_FUNC1 | IOCON_MODE_INACT | IOCON_ADMODE_EN; // ad6 loopback
+	LPC_IOCON->PIO0[23] = IOCON_FUNC1 | IOCON_MODE_INACT | IOCON_ADMODE_EN; // ad7 temperature
 
 	// UART pinmux
 	Chip_UART_Init(LPC_USART);
@@ -262,15 +319,17 @@ int main(void) {
 
 	ADC_CLOCK_SETUP_T adc;
 	Chip_ADC_Init(LPC_ADC, &adc);
+	s_adc_cr = LPC_ADC->CR &= ~ADC_CR_LPWRMODE;
 
 	sendbytes_itm("\r\nHello from riser!\r\n", 21);
 	//printhex_itm("cont:  ", __get_CONTROL());
 	printhex_itm("msp:  ", __get_MSP());
 	printhex_itm("vtor: ", SCB->VTOR);
+	printhex_itm("adc_cr: ", s_adc_cr);
 
 	sendbytes_itm("Module ID: ", 11);
 	sendbytes_itm(s_id.model_name, strlen(s_id.model_name));
-#if 0
+#if 1
 	sendbytes_itm("\r\nCal data:\r\n", 13);
 	for (uint32_t i = 0; i < CAL_MAX_VAL; i++) {
 		printhex_itm("gain: ", s_cal.cal[i].gain);
@@ -294,6 +353,7 @@ int main(void) {
 	Chip_UART_IntEnable(LPC_USART, UART_IER_RBRINT); // Receive fifo level or timeout
 	NVIC_EnableIRQ(UART0_IRQn);
 	NVIC_EnableIRQ(ADC_IRQn);
+	adc_setup_burst(0);
 
     volatile static int i = 0 ;
     // Enter an infinite loop, just incrementing a counter
