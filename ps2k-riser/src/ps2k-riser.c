@@ -61,6 +61,12 @@ static uint16_t s_adc_result[AD_MAX_VAL];
 static const uint8_t s_adscan[] = {AD_REF, AD_CURR, AD_VOLT, AD_LOOP, AD_TEMP};
 #define AD_SCAN_LEN (sizeof(s_adscan) / sizeof(s_adscan[0]))
 
+// ADC input below ~1.428V triggers OT with oem firmware, this is the scaled value I
+// measured at the same input.
+#define OVERTEMP_THRES (14928)
+static uint16_t s_adc_temp_compare = 0;
+static bool s_overtemp = false;
+
 static uint32_t calc_checksum(uint8_t* buf, uint32_t size) {
 	uint32_t result = 0;
 	for (int i = 0; i < size; i++) {
@@ -262,6 +268,16 @@ void ADC_IRQHandler(void) {
 			tmp += 1 << 8; // Round
 			tmp >>= 9; // 4 bits oversampling with 8192 samples requires accumulator to be /512
 			s_adc_result[reqch] = tmp;
+			if (reqch == AD_TEMP) {
+//				printhex_itm("ad:  ", reqch << 28 | tmp);
+//				printhex_itm("comp:", s_adc_temp_compare);
+				if (tmp < s_adc_temp_compare) {
+					s_overtemp = true;
+					output_enable(false);
+				} else {
+					s_overtemp = false;
+				}
+			}
 		}
 	}
 }
@@ -330,6 +346,9 @@ int main(void) {
 	Chip_UART_SetBaud(LPC_USART, 500000);
 	Chip_UART_ConfigData(LPC_USART, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT));
 	Chip_UART_SetupFIFOS(LPC_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV3));
+
+	// Pre-calculate over-temperature threshold (ad reading below this triggers alarm and output disable)
+	s_adc_temp_compare = ((1 << ADCSHIFT) * (OVERTEMP_THRES - s_cal.cal[CAL_TEMP_READ].offset)) / s_cal.cal[CAL_TEMP_READ].gain;
 
 	ADC_CLOCK_SETUP_T adc;
 	Chip_ADC_Init(LPC_ADC, &adc);
