@@ -31,6 +31,12 @@
 static LPC_TIMER_T* timers[] = { LPC_TIMER16_0, LPC_TIMER16_1, LPC_TIMER32_1 };
 #define NUM_TIMERS (sizeof(timers) / sizeof(timers[0]))
 
+#define _BV(x) (1 << x)
+#define STATUS_OVERTEMP _BV(7)
+#define STATUS_MODE_MASK (_BV(2) | _BV(1))
+#define STATUS_CC _BV(2)
+#define STATUS_OUTPUT_ON _BV(0)
+
 static void output_enable(bool on) {
 	LPC_GPIO_PORT->B[0][17] = !on;
 }
@@ -120,6 +126,19 @@ static void update_setpoint(cal_t id) {
 	}
 }
 
+#define ADCSHIFT (17)
+static uint32_t convert_adc_readback(cal_t id, uint32_t value) {
+	uint32_t tmp = s_cal.cal[id].gain;
+	tmp *= value;
+
+	// With a (oversampled) 16-bit ADC value the result has to be shifted 17 bits
+	tmp += 1 << (ADCSHIFT - 1); // Round
+	tmp >>= ADCSHIFT;
+	tmp += s_cal.cal[id].offset;
+	if (tmp & 0x80000000) tmp = 0; // Clamp negative numbers
+	return tmp;
+}
+
 static void handle_set_setpoint(uint32_t len) {
 
 	uint8_t newonoff = s_rxbuf[1];
@@ -145,13 +164,23 @@ static void handle_set_setpoint(uint32_t len) {
 		ITM_SendChar('R');
 	}
 
-//test until we have adc readings
-	readback_volt = newvolt;
-	readback_curr = newcurr;
+	readback_volt = convert_adc_readback(CAL_VOLT_READ, s_adc_result[AD_VOLT]);
+	readback_curr = convert_adc_readback(CAL_CURR_READ, s_adc_result[AD_CURR]);
+
+	bool cc = false;
+	if (!s_overtemp && newonoff) {
+		// Figure out how much lower the actual readback is from setpoint
+		// If more than 0.25% lower (64 steps) we're in CC mode
+		int32_t tmp = s_setpoint.voltage;
+		tmp -= readback_volt;
+		if (tmp >= 64) cc = true;
+	}
 
 	uint8_t resp[8];
 	resp[0] = 0x17;
-	resp[1] = newonoff & 1; // ps on/off, cc operation and overtemp
+	resp[1] = (s_overtemp ? STATUS_OVERTEMP : 0) |
+			(cc ? STATUS_CC : 0) |
+			(newonoff ? STATUS_OUTPUT_ON : 0); // ps on/off, cc operation and overtemp
 	resp[2] = readback_volt >> 8;
 	resp[3] = readback_volt & 0xff;
 	resp[4] = readback_curr >> 8;
