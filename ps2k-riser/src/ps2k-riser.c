@@ -16,8 +16,8 @@
  */
 
 // ISP commands use on-chip RAM from 0x1000017C to 0x1000025B and 0x10001f00 to 0x10001fff
-// according to the LPC1315 user manual. This code will be RAM-loaded at 0x10001000 (up to
-// 0x10001eff) and the stack top will be set to 0x10001fe0. (top 32 bytes reserved for IAP)
+// according to the LPC1315 user manual. This code will be RAM-loaded at 0x10000300 (up to
+// 0x10001fe0) and the stack top will be set to 0x10001fe0. (top 32 bytes reserved for IAP)
 // Let's see if the boot ROM stack will be an issue
 // (the boot ROM initializes the sp to 0x10000ffc, and then seems to update it.
 // sp was 0x10001f70 when this code reached main ran before msp (and vtor) now being
