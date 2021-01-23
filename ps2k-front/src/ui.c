@@ -235,6 +235,7 @@ void ui_task( void* pvParameters ) {
 				case DISP_SETPOINT:
 				case DISP_PRESET:
 					disp_add_glyph(dispbuf, GLYPH_PRESET);
+					disp_add_glyph(dispbuf, GLYPH_V_SLASH_C);
 					// Fallback intentional
 				case DISP_READBACK:
 					disp_add_glyph(dispbuf, left_dp[ scale[CONVERSION_VOLTAGE].num_decimals ]);
