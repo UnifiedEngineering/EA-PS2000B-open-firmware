@@ -12,11 +12,23 @@ I asked Elektro-Automatik technical support about these issues and asked whether
 ## Hardware description
 The triple output PS2384-05B supply consists of two PS2000 LT MC riser boards each controlling one power supply board. Both of these riser boards are connected to a single front panel board with all buttons and both displays on. The third output consists of a tiny riser board off of the second channel power board (not possible to control from the front panel MCU).
 
+![Inside the PS2384-05B](images/top-view.jpg "Top view of PS2384-05B")
+
 The riser boards controls their corresponding power supply using two analog voltages (one for voltage setpoint and one for current setpoint) and receives three analog voltages (voltage and current readback plus power supply temperature). Care must be taken to limit output power to the nominal rated power (voltage and current setpoints must not both simultaneously be set to maximum for instance, dynamic power limiting will take care of that).
+
+![Inside the PS2384-05B](images/power-riser.jpg "Side view of PS2384-05B")
 
 The PS2000 LT MC riser boards normally boots their firmware from internal flash (and my modules reports version 406, or 4.06, firmware from way back in 2014). Due to the fact that the ISP mode pin, the Reset pin and the ISP mode UART are all connected to the front panel MCU this makes ISP boot possible.
 
 I'm using the ISP mode and loading the alternate riser firmware directly into RAM which means that restoring original firmware operation is as simple as restoring the original `firmware.bin` file to the front panel (which does *NOT* contain any riser board firmware, it assumes that the riser will boot on its own).
+
+![Segment display module PCB](images/display-back.jpg "Winstar display PCB")
+
+The displays seems to use some variant of a Holtek HT1621 controller.
+
+![Part of front panel PCB](images/front-mcu.jpg "Part of front panel PCB")
+
+The front panel MCU is a NXP LPC1752.
 
 ## Open-source implementation
 
